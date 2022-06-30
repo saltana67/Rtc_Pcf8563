@@ -39,10 +39,12 @@
 #ifndef Rtc_Pcf8563_H
 #define Rtc_Pcf8563_H
 
+#define RTCC_ADDR B01010001 //0x51, 81 decimal
+
 /* the read and write values for pcf8563 rtcc */
 /* these are adjusted for arduino */
-#define RTCC_R      0xa3
-#define RTCC_W      0xa2
+#define RTCC_R      0xa3    //((RTCC_ADDR<<1) | 0x01)
+#define RTCC_W      0xa2    //((RTCC_ADDR<<1) & (~0x01))
 
 #define RTCC_SEC        1
 #define RTCC_MIN        2
@@ -135,10 +137,13 @@ class Rtc_Pcf8563 {
 
     void zeroClock();  /* Zero date/time, alarm / timer, default clkout */
     void clearStatus(); /* set both status bytes to zero */
+
+    void readAll();     /* get all vals to local vars */
+    void readDateTime();     /* get date and time vals to local vars */
+
     byte readStatus2();
     void clearVoltLow(void); /* Only clearing is possible */
 
-    void getDateTime();     /* get date and time vals to local vars */
     void setDateTime(byte day, byte weekday, byte month, bool century, byte year,
                      byte hour, byte minute, byte sec);
     void getAlarm();  // same as getDateTime
@@ -154,8 +159,8 @@ class Rtc_Pcf8563 {
     bool timerActive();   // true if timer is active (going off)
     void enableTimer(void); // activate timer flag and interrupt
     void setTimer(byte value, byte frequency, bool is_pulsed);  // set value & frequency
-    void clearTimer(void); // clear timer flag, and interrupt, leave value unchanged
-    void resetTimer(void); // same as clearTimer() but leave interrupt unchanged */
+    void clearTimer(boolean update = false); // clear timer flag, and interrupt, leave value unchanged
+    void resetTimer(boolean update = false); // same as clearTimer() but leave interrupt unchanged */
 
     void setSquareWave(byte frequency);
     void clearSquareWave();
@@ -195,7 +200,7 @@ class Rtc_Pcf8563 {
     byte getAlarmWeekday();
 
     byte getTimerControl();
-    byte getTimerValue();
+    byte getTimerValue(boolean update = false);
 
     unsigned long getTimestamp();	// return unix timestamp
 

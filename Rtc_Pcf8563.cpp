@@ -40,8 +40,8 @@
 
 Rtc_Pcf8563::Rtc_Pcf8563(void)
 {
-    Wire.begin();
-    Rtcc_Addr = RTCC_R>>1;
+    //Wire.begin();
+    Rtcc_Addr = RTCC_ADDR;
 }
 
 Rtc_Pcf8563::Rtc_Pcf8563(int sdaPin, int sdlPin)
@@ -98,13 +98,13 @@ void Rtc_Pcf8563::clearStatus()
 */
 byte Rtc_Pcf8563::readStatus2()
 {
-    getDateTime();
+    readDateTime();
     return getStatus2();
 }
 
 void Rtc_Pcf8563::clearVoltLow(void)
 {
-    getDateTime();
+    readDateTime();
     // Only clearing is possible on device (I tried)
     setDateTime(getDay(), getWeekday(), getMonth(),
                 getCentury(), getYear(), getHour(),
@@ -114,7 +114,7 @@ void Rtc_Pcf8563::clearVoltLow(void)
 /*
 * Atomicly read all device registers in one operation
 */
-void Rtc_Pcf8563::getDateTime(void)
+void Rtc_Pcf8563::readAll(void)
 {
     /* Start at beginning, read entire memory in one go */
     Wire.beginTransmission(Rtcc_Addr);
@@ -138,7 +138,17 @@ void Rtc_Pcf8563::getDateTime(void)
     minute = bcdToDec(readBuffer[3] & 0x7f);
     //0x3f = 0b00111111
     hour = bcdToDec(readBuffer[4] & 0x3f);
-
+    if(hour > 12)
+    {
+        hour12 = hour - 12;
+        am = false;
+    }
+    else
+    {
+        hour12 = hour;
+        am = true;
+    }
+    
     // date bytes
     //0x3f = 0b00111111
     day = bcdToDec(readBuffer[5] & 0x3f);
@@ -185,6 +195,58 @@ void Rtc_Pcf8563::getDateTime(void)
     timer_value = readBuffer[15];  // current value != set value when running
 }
 
+void Rtc_Pcf8563::readDateTime(void)
+{
+    /* Start at beginning, read entire memory in one go */
+    Wire.beginTransmission(Rtcc_Addr);
+    Wire.write((byte)RTCC_STAT1_ADDR);
+    Wire.endTransmission();
+
+    /* As per data sheet, have to read everything all in one operation */
+    uint8_t readBuffer[16] = {0};
+    Wire.requestFrom(Rtcc_Addr, 16);
+    for (uint8_t i=0; i < 16; i++)
+        readBuffer[i] = Wire.read();
+
+    // status bytes
+    status1 = readBuffer[0];
+    status2 = readBuffer[1];
+
+    // time bytes
+    //0x7f = 0b01111111
+    volt_low = readBuffer[2] & RTCC_VLSEC_MASK;  //VL_Seconds
+    sec = bcdToDec(readBuffer[2] & ~RTCC_VLSEC_MASK);
+    minute = bcdToDec(readBuffer[3] & 0x7f);
+    //0x3f = 0b00111111
+    hour = bcdToDec(readBuffer[4] & 0x3f);
+    if(hour > 12)
+    {
+        hour12 = hour - 12;
+        am = false;
+    }
+    else
+    {
+        hour12 = hour;
+        am = true;
+    }
+    
+    // date bytes
+    //0x3f = 0b00111111
+    day = bcdToDec(readBuffer[5] & 0x3f);
+    //0x07 = 0b00000111
+    weekday = bcdToDec(readBuffer[6] & 0x07);
+    //get raw month data byte and set month and century with it.
+    month = readBuffer[7];
+    if (month & RTCC_CENTURY_MASK)
+        century = true;
+    else
+        century = false;
+    //0x1f = 0b00011111
+    month = month & 0x1f;
+    month = bcdToDec(month);
+    year = bcdToDec(readBuffer[8]);
+}
+
 
 void Rtc_Pcf8563::setDateTime(byte day, byte weekday, byte month,
                               bool century, byte year, byte hour,
@@ -213,7 +275,7 @@ void Rtc_Pcf8563::setDateTime(byte day, byte weekday, byte month,
     Wire.write(decToBcd(year));        //set year to 99
     Wire.endTransmission();
     // Keep values in-sync with device
-    getDateTime();
+    readDateTime();
 }
 
 /**
@@ -221,7 +283,7 @@ void Rtc_Pcf8563::setDateTime(byte day, byte weekday, byte month,
 */
 void Rtc_Pcf8563::getAlarm()
 {
-    getDateTime();
+    readAll();
 }
 
 /*
@@ -248,7 +310,7 @@ bool Rtc_Pcf8563::alarmActive()
  */
 void Rtc_Pcf8563::enableAlarm()
 {
-    getDateTime();  // operate on current values
+    readAll();  // operate on current values
     //set status2 AF val to zero
     status2 &= ~RTCC_ALARM_AF;
     //set TF to 1 masks it from changing, as per data-sheet
@@ -269,7 +331,7 @@ void Rtc_Pcf8563::enableAlarm()
  */
 void Rtc_Pcf8563::setAlarm(byte min, byte hour, byte day, byte weekday)
 {
-    getDateTime();  // operate on current values
+    readAll();  // operate on current values
     if (min <99) {
         min = constrain(min, 0, 59);
         min = decToBcd(min);
@@ -369,7 +431,7 @@ bool Rtc_Pcf8563::timerActive()
 // enable timer and interrupt
 void Rtc_Pcf8563::enableTimer(void)
 {
-    getDateTime();
+    readAll();
     //set TE to 1
     timer_control |= RTCC_TIMER_TE;
     //set status2 TF val to zero
@@ -395,11 +457,11 @@ void Rtc_Pcf8563::enableTimer(void)
 // set count-down value and frequency
 void Rtc_Pcf8563::setTimer(byte value, byte frequency, bool is_pulsed)
 {
-    getDateTime();
+    readAll();
     if (is_pulsed)
-        status2 |= is_pulsed << 4;
+        status2 |= 0x01 << 4;
     else
-        status2 &= ~(is_pulsed << 4);
+        status2 &= ~(0x01 << 4);
     timer_value = value;
     // TE set to 1 in enableTimer(), leave 0 for now
     timer_control |= (frequency & RTCC_TIMER_TD10); // use only last 2 bits
@@ -420,13 +482,14 @@ void Rtc_Pcf8563::setTimer(byte value, byte frequency, bool is_pulsed)
 
 
 // clear timer flag and interrupt
-void Rtc_Pcf8563::clearTimer(void)
+void Rtc_Pcf8563::clearTimer(boolean update)
 {
-    getDateTime();
+    if( update ) 
+        readAll();
     //set status2 TF val to zero
     status2 &= ~RTCC_TIMER_TF;
     //set AF to 1 masks it from changing, as per data-sheet
-    status2 |= RTCC_ALARM_AF;
+    //status2 |= RTCC_ALARM_AF; //NOT HERE: move to write below, to retain current value
     //turn off the interrupt
     status2 &= ~RTCC_TIMER_TIE;
     //turn off the timer
@@ -441,15 +504,18 @@ void Rtc_Pcf8563::clearTimer(void)
     // clear flag and interrupt
     Wire.beginTransmission(Rtcc_Addr);
     Wire.write((byte)RTCC_STAT2_ADDR);
-    Wire.write((byte)status2);
+    //set AF to 1 masks it from changing, as per data-sheet
+    status2 |= RTCC_ALARM_AF;
+    Wire.write((byte)(status2|RTCC_ALARM_AF));
     Wire.endTransmission();
 }
 
 
 // clear timer flag but leave interrupt unchanged */
-void Rtc_Pcf8563::resetTimer(void)
+void Rtc_Pcf8563::resetTimer(boolean update)
 {
-    getDateTime();
+    if( update )
+        readAll();
     //set status2 TF val to zero to reset timer
     status2 &= ~RTCC_TIMER_TF;
     //set AF to 1 masks it from changing, as per data-sheet
@@ -604,26 +670,26 @@ void Rtc_Pcf8563::initClock()
 
 void Rtc_Pcf8563::setTime(byte hour, byte minute, byte sec)
 {
-    getDateTime();
+    readDateTime();
     setDateTime(getDay(), getWeekday(), getMonth(),
                 getCentury(), getYear(), hour, minute, sec);
 }
 
 void Rtc_Pcf8563::setDate(byte day, byte weekday, byte month, bool century, byte year)
 {
-    getDateTime();
+    readDateTime();
     setDateTime(day, weekday, month, century, year,
                 getHour(), getMinute(), getSecond());
 }
 
 void Rtc_Pcf8563::getDate()
 {
-    getDateTime();
+    readDateTime();
 }
 
 void Rtc_Pcf8563::getTime()
 {
-    getDateTime();
+    readDateTime();
 }
 
 bool Rtc_Pcf8563::getVoltLow(void)
@@ -663,15 +729,17 @@ byte Rtc_Pcf8563::getTimerControl() {
     return timer_control;
 }
 
-byte Rtc_Pcf8563::getTimerValue() {
-    // Impossible to freeze this value, it could
-    // be changing during read.  Multiple reads
-    // required to check for consistency.
-    uint8_t last_value;
-    do {
-        last_value = timer_value;
-        getDateTime();
-    } while (timer_value != last_value);
+byte Rtc_Pcf8563::getTimerValue(boolean update) {
+    if( update ){
+        // Impossible to freeze this value, it could
+        // be changing during read.  Multiple reads
+        // required to check for consistency.
+        uint8_t last_value;
+        do {
+            last_value = timer_value;
+            readDateTime();
+        } while (timer_value != last_value);
+    }
     return timer_value;
 }
 
