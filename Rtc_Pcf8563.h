@@ -106,9 +106,12 @@
 #define RTCC_DATE_WORLD     0x01
 #define RTCC_DATE_ASIA      0x02
 #define RTCC_DATE_US        0x04
+#define RTCC_DATE_CZ        0x05
 /* time format flags */
 #define RTCC_TIME_HMS       0x01
 #define RTCC_TIME_HM        0x02
+#define RTCC_TIME_HMS_12    0x03
+#define RTCC_TIME_HM_12     0x04
 
 /* square wave constants */
 #define SQW_DISABLE     0B00000000
@@ -219,6 +222,8 @@ class Rtc_Pcf8563 {
     byte bcdToDec(byte value);
     /* time variables */
     byte hour;
+    byte hour12;
+    bool am;
     byte minute;
     bool volt_low;
     byte sec;
