@@ -94,10 +94,10 @@
 #define RTCC_TIMER_TE       0x80  // Timer 1:enable/0:disable
 
 /* Timer source-clock frequency constants */
-#define TMR_4096HZ      B00000000
-#define TMR_64Hz        B00000001
-#define TMR_1Hz         B00000010
-#define TMR_1MIN        B00000011
+#define TMR_4096HZ      0B00000000
+#define TMR_64Hz        0B00000001
+#define TMR_1Hz         0B00000010
+#define TMR_1MIN        0B00000011
 
 #define RTCC_CENTURY_MASK   0x80
 #define RTCC_VLSEC_MASK     0x80
@@ -111,11 +111,11 @@
 #define RTCC_TIME_HM        0x02
 
 /* square wave constants */
-#define SQW_DISABLE     B00000000
-#define SQW_32KHZ       B10000000
-#define SQW_1024HZ      B10000001
-#define SQW_32HZ        B10000010
-#define SQW_1HZ         B10000011
+#define SQW_DISABLE     0B00000000
+#define SQW_32KHZ       0B10000000
+#define SQW_1024HZ      0B10000001
+#define SQW_32HZ        0B10000010
+#define SQW_1HZ         0B10000011
 
 /* epoch timestamp constants : 01/01/2016 à 00:00:00 : 1451599200 */
 #define epoch_day	1
