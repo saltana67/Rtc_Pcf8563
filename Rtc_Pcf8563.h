@@ -39,7 +39,7 @@
 #ifndef Rtc_Pcf8563_H
 #define Rtc_Pcf8563_H
 
-#define RTCC_ADDR B01010001 //0x51, 81 decimal
+#define RTCC_ADDR 0B01010001 //0x51, 81 decimal
 
 /* the read and write values for pcf8563 rtcc */
 /* these are adjusted for arduino */
