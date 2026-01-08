@@ -167,25 +167,25 @@ void Rtc_Pcf8563::readAll(void)
 
     // alarm bytes
     alarm_minute = readBuffer[9];
-    if(B10000000 & alarm_minute)
+    if(0B10000000 & alarm_minute)
         alarm_minute = RTCC_NO_ALARM;
     else
-        alarm_minute = bcdToDec(alarm_minute & B01111111);
+        alarm_minute = bcdToDec(alarm_minute & 0B01111111);
     alarm_hour = readBuffer[10];
-    if(B10000000 & alarm_hour)
+    if(0B10000000 & alarm_hour)
         alarm_hour = RTCC_NO_ALARM;
     else
-        alarm_hour = bcdToDec(alarm_hour & B00111111);
+        alarm_hour = bcdToDec(alarm_hour & 0B00111111);
     alarm_day = readBuffer[11];
-    if(B10000000 & alarm_day)
+    if(0B10000000 & alarm_day)
         alarm_day = RTCC_NO_ALARM;
     else
-        alarm_day = bcdToDec(alarm_day  & B00111111);
+        alarm_day = bcdToDec(alarm_day  & 0B00111111);
     alarm_weekday = readBuffer[12];
-    if(B10000000 & alarm_weekday)
+    if(0B10000000 & alarm_weekday)
         alarm_weekday = RTCC_NO_ALARM;
     else
-        alarm_weekday = bcdToDec(alarm_weekday  & B00000111);
+        alarm_weekday = bcdToDec(alarm_weekday  & 0B00000111);
 
     // CLKOUT_control 0x03 = 0b00000011
     squareWave = readBuffer[13] & 0x03;
